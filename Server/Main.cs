@@ -145,8 +145,10 @@ namespace Server
 		public static int ProcessorCount { get; private set; }
 
 		public static bool Unix { get; private set; }
-		
-		public static string FindDataFile(string path)
+
+        public static string DotNet { get; private set; }
+
+        public static string FindDataFile(string path)
 		{
 			if (DataDirectories.Count == 0)
 			{
@@ -519,8 +521,6 @@ namespace Server
 					Is64Bit ? "64-bit " : "");
 				Utility.PopColor();
 			}
-			
-			string dotnet = null;
 
 			if (Type.GetType("Mono.Runtime") != null)
 			{	
@@ -528,7 +528,7 @@ namespace Server
 
 				if (displayName != null)
 				{
-					dotnet = displayName.Invoke(null, null).ToString();
+					DotNet = displayName.Invoke(null, null).ToString();
 					
 					Utility.PushColor(ConsoleColor.Yellow);
 					Console.WriteLine("Core: Unix environment detected");
@@ -544,54 +544,54 @@ namespace Server
 			}
             
             #if NETFX_30
-                        dotnet = "3.0";
+                        DotNet = "3.0";
             #endif
 
             #if NETFX_35
-                        dotnet = "3.5";
+                        DotNet = "3.5";
             #endif
 
             #if NETFX_40
-                        dotnet = "4.0";
+                        DotNet = "4.0";
             #endif
 
             #if NETFX_45
-                        dotnet = "4.5";
+                        DotNet = "4.5";
             #endif
 
             #if NETFX_451
-                        dotnet = "4.5.1";
+                        DotNet = "4.5.1";
             #endif
 
             #if NETFX_46
-                        dotnet = "4.6.0";
+                        DotNet = "4.6.0";
             #endif
 
             #if NETFX_461
-                        dotnet = "4.6.1";
+                        DotNet = "4.6.1";
             #endif
 
             #if NETFX_462
-                        dotnet = "4.6.2";
+                        DotNet = "4.6.2";
             #endif
 
             #if NETFX_47
-                        dotnet = "4.7";
+                        DotNet = "4.7";
             #endif
 
             #if NETFX_471
-                        dotnet = "4.7.1";
+                        DotNet = "4.7.1";
             #endif
 
             #if NETFX_472
-                        dotnet = "4.7.2";
+                        DotNet = "4.7.2";
             #endif
 
-            if (String.IsNullOrEmpty(dotnet))
-                dotnet = "MONO/CSC/Unknown";
+            if (String.IsNullOrEmpty(DotNet))
+                DotNet = "MONO/CSC/Unknown";
             
             Utility.PushColor(ConsoleColor.Green);
-            Console.WriteLine("Core: Compiled for " + ( Unix ? "MONO and running on {0}" : ".NET {0}" ), dotnet);
+            Console.WriteLine("Core: Compiled for " + ( Unix ? "MONO and running on {0}" : ".NET {0}" ), DotNet);
             Utility.PopColor();
 
 			if (GCSettings.IsServerGC)

@@ -33,6 +33,7 @@
 *.bin
 <<<<<<< HEAD
 .vs/
+.sync/
 drng64.dll
 drng32.dll
 libdrng.so

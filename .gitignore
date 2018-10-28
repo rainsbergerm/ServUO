@@ -33,3 +33,4 @@
 *.bin
 *.csproj.user
 *.DotSettings.user
+.sync/

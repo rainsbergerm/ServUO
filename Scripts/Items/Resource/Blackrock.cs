@@ -1,29 +1,35 @@
 using System;
+using Server.Network;
 
 namespace Server.Items
 {
-    public class SwarmOfFlies : Item
+    public class Blackrock : Item
     {
         [Constructable]
-        public SwarmOfFlies()
-            : base(0x91B)
+        public Blackrock()
+            : base(Utility.RandomList(0x136C, 0x1EA7))
         {
-            this.Hue = 1;
-            this.Movable = false;
+            Hue = 1954;
         }
 
-        public SwarmOfFlies(Serial serial)
+        public Blackrock(Serial serial)
             : base(serial)
         {
         }
 
-        public override string DefaultName
+        public override int LabelNumber
         {
             get
             {
-                return "a swarm of flies";
+                switch (ItemID)
+                {
+                    case 0x136C: return 1153837; // a large piece of blackrock
+                    case 0x1EA7: return 1150016; // a small piece of blackrock
+                    default: return 1153836; // a piece of blackrock
+                }
             }
         }
+		
         public override void Serialize(GenericWriter writer)
         {
             base.Serialize(writer);

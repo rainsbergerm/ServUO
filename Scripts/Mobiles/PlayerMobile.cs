@@ -86,14 +86,12 @@ namespace Server.Mobiles
         HasValiantStatReward = 0x20000000,
         RefuseTrades = 0x40000000,
         DisabledPvpWarning = 0x80000000,
-        //CanBuyCarpets = 0x100000000,
-        //VoidPool = 0x200000000,
     }
 
     [Flags]
     public enum ExtendedPlayerFlag
     {
-        HideTownCrierGreetingGump   = 0x00000001,
+        Unused                      = 0x00000001,
         ToggleStoneOnly             = 0x00000002,
         CanBuyCarpets               = 0x00000004,
         VoidPool                    = 0x00000008,
@@ -290,10 +288,6 @@ namespace Server.Mobiles
                 if (_BODProps == null)
                 {
                     _BODProps = new BODProps(this);
-                }
-                else
-                {
-                    _BODProps.CheckChanges();
                 }
 
                 return _BODProps;
@@ -538,13 +532,6 @@ namespace Server.Mobiles
         {
             get { return GetFlag(ExtendedPlayerFlag.VoidPool); }
             set { SetFlag(ExtendedPlayerFlag.VoidPool, value); }
-        }
-
-        [CommandProperty(AccessLevel.GameMaster)]
-        public bool HideTownCrierGreetingGump
-        {
-            get { return GetFlag(ExtendedPlayerFlag.HideTownCrierGreetingGump); }
-            set { SetFlag(ExtendedPlayerFlag.HideTownCrierGreetingGump, value); }
         }
 
         [CommandProperty(AccessLevel.GameMaster)]
@@ -1781,12 +1768,11 @@ namespace Server.Mobiles
 		{
 			if (AccessLevel < AccessLevel.GameMaster && item.IsChildOf(Backpack))
 			{
-				int maxWeight = WeightOverloading.GetMaxWeight(this);
 				int curWeight = BodyWeight + TotalWeight;
 
-				if (curWeight > maxWeight)
+                if (curWeight > MaxWeight)
 				{
-					SendLocalizedMessage(1019035, true, String.Format(" : {0} / {1}", curWeight, maxWeight));
+                    SendLocalizedMessage(1019035, true, String.Format(" : {0} / {1}", curWeight, MaxWeight));
 				}
 			}
 		}
@@ -2001,8 +1987,11 @@ namespace Server.Mobiles
 					}
 
                     // Skill Masteries
-                    if(Core.TOL)
+                    if (Core.TOL)
+                    {
                         strOffs += ToughnessSpell.GetHPBonus(this);
+                        strOffs += InvigorateSpell.GetHPBonus(this);
+                    }
 				}
 				else
 				{
@@ -2218,7 +2207,7 @@ namespace Server.Mobiles
 
                     if (info.Defender.InRange(Location, Core.GlobalMaxUpdateRange) && info.Defender.DamageEntries.Any(de => de.Damager == this))
                     {
-                        info.Defender.RegisterDamage(amount, from);
+                        info.Defender.RegisterDamage(amount / 2, from);
                     }
 
                     if (info.Defender.Player && from.CanBeHarmful(info.Defender, false))
@@ -2233,7 +2222,7 @@ namespace Server.Mobiles
 
                     if (info.Attacker.InRange(Location, Core.GlobalMaxUpdateRange) && info.Attacker.DamageEntries.Any(de => de.Damager == this))
                     {
-                        info.Attacker.RegisterDamage(amount, from);
+                        info.Attacker.RegisterDamage(amount / 2, from);
                     }
 
                     if (info.Attacker.Player && from.CanBeHarmful(info.Attacker, false))
@@ -3512,6 +3501,8 @@ namespace Server.Mobiles
 
 		protected override void OnMapChange(Map oldMap)
 		{
+            ViceVsVirtueSystem.OnMapChange(this);
+
             if (NetState != null && NetState.IsEnhancedClient)
             {
                 Waypoints.OnMapChange(this, oldMap);
@@ -3569,11 +3560,6 @@ namespace Server.Mobiles
 
 		public override void OnDamage(int amount, Mobile from, bool willKill)
 		{
-            if (Core.SA && from != null)
-            {
-                from.RegisterDamage(amount, this);
-            }
-
 			int disruptThreshold;
 
 			if (!Core.AOS)
@@ -3608,8 +3594,6 @@ namespace Server.Mobiles
 			{
 				Confidence.StopRegenerating(this);
 			}
-
-			WeightOverloading.FatigueOnDamage(this, amount);
 
 			if (m_ReceivedHonorContext != null)
 			{
@@ -4018,6 +4002,8 @@ namespace Server.Mobiles
 				}
 			}
 
+			Faction.HandleDeath(this, killer);
+
 			Guilds.Guild.HandleDeath(this, killer);
             
             if (m_BuffTable != null)
@@ -4331,7 +4317,7 @@ namespace Server.Mobiles
 			}
 
             //Skill Masteries
-            if (SkillMasterySpell.UnderPartyEffects(this, typeof(Spells.SkillMasteries.ResilienceSpell)) && 0.25 > Utility.RandomDouble())
+            if (Spells.SkillMasteries.ResilienceSpell.UnderEffects(this) && 0.25 > Utility.RandomDouble())
             {
                 return ApplyPoisonResult.Immune;
             }
@@ -4433,11 +4419,15 @@ namespace Server.Mobiles
 				return false;
 			}
 
-			if (Core.ML && target is BaseCreature && ((BaseCreature)target).Controlled &&
-				this == ((BaseCreature)target).ControlMaster)
+			if (Core.ML && target is BaseCreature && ((BaseCreature)target).Controlled && ((BaseCreature)target).ControlMaster == this)
 			{
 				return false;
 			}
+
+            if (target is BaseCreature && ((BaseCreature)target).Summoned && ((BaseCreature)target).SummonMaster == this)
+            {
+                return false;
+            }
 
 			return base.IsHarmfulCriminal(damageable);
 		}
@@ -6280,10 +6270,14 @@ namespace Server.Mobiles
 		}
 		#endregion
 
-		#region Speech log
+		#region Speech
 		private SpeechLog m_SpeechLog;
+        private bool m_TempSquelched;
 
 		public SpeechLog SpeechLog { get { return m_SpeechLog; } }
+
+        [CommandProperty(AccessLevel.Administrator)]
+        public bool TempSquelched { get { return m_TempSquelched; } set { m_TempSquelched = value; } }
 
 		public override void OnSpeech(SpeechEventArgs e)
 		{
@@ -6297,6 +6291,27 @@ namespace Server.Mobiles
 				m_SpeechLog.Add(e.Mobile, e.Speech);
 			}
 		}
+
+        public override void OnSaid(SpeechEventArgs e)
+        {
+            if (m_TempSquelched)
+            {
+                if (Core.ML)
+                {
+                    SendLocalizedMessage(500168); // You can not say anything, you have been muted.
+                }
+                else
+                {
+                    SendMessage("You can not say anything, you have been squelched."); //Cliloc ITSELF changed during ML.
+                }
+
+                e.Blocked = true;
+            }
+            else
+            {
+                base.OnSaid(e);
+            }
+        }
 		#endregion
 
 		#region Champion Titles

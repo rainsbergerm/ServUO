@@ -94,7 +94,7 @@ namespace Server.Gumps
 
                         if (Imbuing.CanImbueItem(from, it) && Imbuing.OnBeforeImbue(from, it, mod, modint))
                         {
-                            Imbuing.ImbueItem(from, it, mod, modint);
+                            Imbuing.TryImbueItem(from, it, mod, modint);
                             ImbuingGumpC.SendGumpDelayed(from);
                         }
                         break;
@@ -247,7 +247,7 @@ namespace Server.Gumps
             {
                 from.EndAction(typeof(Imbuing));
 
-                if (!(o is Container))
+                if (!(o is Container) || (o is LockableContainer && ((LockableContainer)o).Locked))
                 {
                     from.SendLocalizedMessage(1080425); // You cannot magically unravel this item.
                     return;
@@ -463,7 +463,7 @@ namespace Server.Gumps
                     return;
                 }
 
-                Imbuing.ImbueItem(from, it, mod, modInt);
+                Imbuing.TryImbueItem(from, it, mod, modInt);
                 ImbuingGumpC.SendGumpDelayed(from);
             }
 

@@ -485,6 +485,12 @@ namespace Server
         Pillage = 14,
         Spawn = 15
     }
+
+    public enum DFAlgorithm
+    {
+        Standard,
+        PainSpike
+    }
 	#endregion
 
 	[Serializable]
@@ -512,6 +518,8 @@ namespace Server
 	public delegate bool AllowBeneficialHandler(Mobile from, Mobile target);
 
 	public delegate bool AllowHarmfulHandler(Mobile from, IDamageable target);
+
+    public delegate void FatigueHandler(Mobile m, int damage, DFAlgorithm df);
 
 	public delegate Container CreateCorpseHandler(
 		Mobile from, HairInfo hair, FacialHairInfo facialhair, List<Item> initialContent, List<Item> equipedItems);
@@ -609,8 +617,9 @@ namespace Server
 
 		#region Handlers
 		public static AllowBeneficialHandler AllowBeneficialHandler { get; set; }
-
 		public static AllowHarmfulHandler AllowHarmfulHandler { get; set; }
+
+        public static FatigueHandler FatigueHandler { get; set; }
 
 		private static SkillCheckTargetHandler m_SkillCheckTargetHandler;
 		private static SkillCheckLocationHandler m_SkillCheckLocationHandler;
@@ -859,6 +868,8 @@ namespace Server
 
         [CommandProperty(AccessLevel.GameMaster)]
         public bool CharacterOut { get; set; }
+
+        public DFAlgorithm DFA { get; set; } 
 
         protected virtual void OnRaceChange(Race oldRace)
 		{ }
@@ -4582,6 +4593,7 @@ namespace Server
 						else
 						{
                             item.SetLastMoved();
+
                             var itemGrid = item.GridLocation;
 
 							if (item.Spawner != null)
@@ -4759,7 +4771,7 @@ namespace Server
 
 			oldItem.Amount = amount;
 			oldItem.OnAfterDuped(item);
-           // item.GridLocation = oldItem.GridLocation;
+            //item.GridLocation = oldItem.GridLocation;
 
 			if (oldItem.Parent is Mobile)
 			{
@@ -5541,6 +5553,7 @@ namespace Server
 
         [CommandProperty(AccessLevel.GameMaster)]
         public DateTime LastKilled { get { return m_LastKilled; } set { m_LastKilled = value; } }
+
 		/// <summary>
 		///     Overridable. Virtual event invoked when the Mobile is <see cref="Damage">damaged</see>. It is called before
 		///     <see
@@ -5613,7 +5626,7 @@ namespace Server
 
 				if (m != null && informMount)
 				{
-					m.OnRiderDamaged(amount, from, newHits < 0);
+					m.OnRiderDamaged(from, ref amount, newHits < 0);
 				}
 
 				if (newHits < 0)
@@ -5630,6 +5643,8 @@ namespace Server
 				else
 				{
 					Hits = newHits;
+
+                    FatigueHandler(this, amount, DFA);
 				}
 			}
 
@@ -7388,7 +7403,7 @@ namespace Server
 
 			if (m_Map != null && ns != null)
 			{
-				var eable = m_Map.GetObjectsInRange(m_Location, Core.GlobalMaxUpdateRange);
+                var eable = m_Map.GetObjectsInRange(m_Location, Core.GlobalRadarRange - 4);
 
 				foreach (IEntity o in eable)
 				{
@@ -7658,7 +7673,7 @@ namespace Server
 
 			if (m_Map != null && ns != null)
 			{
-				var eable = m_Map.GetObjectsInRange(m_Location);
+                var eable = m_Map.GetObjectsInRange(m_Location, Core.GlobalRadarRange);
 
 				foreach (var o in eable)
 				{
@@ -10143,7 +10158,7 @@ namespace Server
 					// Check to see if we are attached to a client
 					if (ourState != null)
 					{
-						var eeable = map.GetObjectsInRange(newLocation);
+                        var eeable = map.GetObjectsInRange(newLocation, Core.GlobalRadarRange);
 
 						// We are attached to a client, so it's a bit more complex. We need to send new items and people to ourself, and ourself to other clients
 						foreach (IEntity o in eeable)

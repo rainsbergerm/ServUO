@@ -19,10 +19,17 @@ namespace Server.Engines.Points
 
         private TextDefinition m_Name = null;
 
+        public static bool Enabled { get; set; }
+
         public CleanUpBritanniaData()
         {
-            InitializeEntries();
-            PointsExchange = new Dictionary<string, double>();
+            Enabled = Core.ML;
+
+            if (Enabled)
+            {
+                InitializeEntries();
+                PointsExchange = new Dictionary<string, double>();
+            }
         }
 
         public static double GetPoints(Item item)
@@ -550,7 +557,7 @@ namespace Server.Engines.Points
             Entries[typeof(VampiricEssence)] = 5000.0;
             Entries[typeof(Venom)] = 5000.0;
             Entries[typeof(VoidInfusedKilt)] = 5000.0;
-            Entries[typeof(WallofHungryMouths)] = 5000.0;
+            Entries[typeof(WallOfHungryMouths)] = 5000.0;
 
             //Tokuno Major Artifacts
             Entries[typeof(DarkenedSky)] = 2500.0;
@@ -798,11 +805,15 @@ namespace Server.Engines.Points
             base.Serialize(writer);
             writer.Write(0);
 
-            writer.Write(PointsExchange.Count);
-            foreach (var kvp in PointsExchange)
+            writer.Write(PointsExchange == null ? 0 : PointsExchange.Count);
+
+            if (PointsExchange != null)
             {
-                writer.Write(kvp.Key);
-                writer.Write(kvp.Value);
+                foreach (var kvp in PointsExchange)
+                {
+                    writer.Write(kvp.Key);
+                    writer.Write(kvp.Value);
+                }
             }
         }
 

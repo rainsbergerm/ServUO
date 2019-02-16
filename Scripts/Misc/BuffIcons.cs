@@ -416,7 +416,9 @@ namespace Server
         KurakAmbushersEssence,
         BarakoDraftOfMight,
         UraliTranceTonic,
-        SakkhraProphylaxis
+        SakkhraProphylaxis,
+        CaddelliteInfused = 1186,
+        MysticalPolymorphTotem = 1188
     }
 
     public sealed class AddBuffPacket : Packet

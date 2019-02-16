@@ -370,9 +370,6 @@ namespace Server.Mobiles
         protected DateTime SummonEnd { get { return m_SummonEnd; } set { m_SummonEnd = value; } }
 
         public virtual Faction FactionAllegiance { get { return null; } }
-        public virtual int FactionSilverWorth { get { return 30; } }
-
-        public virtual int BaseLootBudget { get { return RandomItemGenerator.GetBaseBudget(this); } }
 
         public virtual int DefaultHitsRegen 
         {
@@ -844,8 +841,6 @@ namespace Server.Mobiles
         }
         #endregion
 
-        public virtual bool AutoRearms { get { return false; } }
-
         public virtual double WeaponAbilityChance { get { return 0.4; } }
 
         public virtual WeaponAbility GetWeaponAbility()
@@ -1026,8 +1021,6 @@ namespace Server.Mobiles
         }
 
         public bool IsAmbusher { get; set; }
-
-        public virtual bool HasManaOveride { get { return false; } }
 
         public virtual FoodType FavoriteFood { get { return FoodType.Meat; } }
         public virtual PackInstinct PackInstinct { get { return PackInstinct.None; } }
@@ -1345,24 +1338,7 @@ namespace Server.Mobiles
 
         public virtual void DrainLife()
         {
-            List<Mobile> list = new List<Mobile>();
-
-            IPooledEnumerable eable = GetMobilesInRange(2);
-
-            foreach (Mobile m in eable)
-            {
-                if (m == this || !CanBeHarmful(m))
-                    continue;
-
-                if (m is BaseCreature && (((BaseCreature)m).Controlled || ((BaseCreature)m).Summoned || ((BaseCreature)m).Team != Team))
-                    list.Add(m);
-                else if (m.Player)
-                    list.Add(m);
-            }
-
-            eable.Free();
-
-            foreach (Mobile m in list)
+            foreach (Mobile m in SpellHelper.AcquireIndirectTargets(this, this, Map, 2).OfType<Mobile>())
             {
                 DoHarmful(m);
 
@@ -1385,8 +1361,6 @@ namespace Server.Mobiles
                 Hits += toDrain;
                 m.Damage(toDrain, this);
             }
-
-            ColUtility.Free(list);
         }
         #endregion
 
@@ -2201,9 +2175,11 @@ namespace Server.Mobiles
         {
             get
             {
+                int value = Str;
+
                 if (m_HitsMax > 0)
                 {
-                    int value = m_HitsMax + GetStatOffset(StatType.Str);
+                    value = m_HitsMax + GetStatOffset(StatType.Str);
 
                     if (value < 1)
                     {
@@ -2213,11 +2189,16 @@ namespace Server.Mobiles
                     {
                         value = 1000000;
                     }
-
-                    return value;
                 }
 
-                return Str;
+                // Skill Masteries
+                if (Core.TOL)
+                {
+                    value += ToughnessSpell.GetHPBonus(this);
+                    value += InvigorateSpell.GetHPBonus(this);
+                }
+
+                return value;
             }
         }
 
@@ -2337,11 +2318,6 @@ namespace Server.Mobiles
 
         public override void OnDamage(int amount, Mobile from, bool willKill)
         {
-            if (Core.SA && from != null)
-            {
-                from.RegisterDamage(amount, this);
-            }
-
             if (BardPacified && (HitsMax - Hits) * 0.001 > Utility.RandomDouble())
             {
                 Unpacify();
@@ -2376,8 +2352,6 @@ namespace Server.Mobiles
             {
                 Confidence.StopRegenerating(this);
             }
-
-            WeightOverloading.FatigueOnDamage(this, amount);
 
             InhumanSpeech speechType = SpeechType;
 
@@ -6183,7 +6157,6 @@ namespace Server.Mobiles
 					{
 						PackItem( new ParagonChest( this.Name, treasureLevel ) );
 					}
-				
                     else if (TreasureMapChance >= Utility.RandomDouble())
                     {
                         Map map = Map;
@@ -7388,7 +7361,7 @@ namespace Server.Mobiles
 
                     if (info.Defender.InRange(Location, Core.GlobalMaxUpdateRange) && info.Defender.DamageEntries.Any(de => de.Damager == this))
                     {
-                        info.Defender.RegisterDamage(amount, from);
+                        info.Defender.RegisterDamage(amount / 2, from);
                     }
 
                     if (info.Defender.Player && from.CanBeHarmful(info.Defender))
@@ -7403,7 +7376,7 @@ namespace Server.Mobiles
 
                     if (info.Attacker.InRange(Location, Core.GlobalMaxUpdateRange) && info.Attacker.DamageEntries.Any(de => de.Damager == this))
                     {
-                        info.Attacker.RegisterDamage(amount, from);
+                        info.Attacker.RegisterDamage(amount / 2, from);
                     }
 
                     if (info.Attacker.Player && from.CanBeHarmful(info.Attacker))
@@ -7444,21 +7417,7 @@ namespace Server.Mobiles
                 return;
             }
 
-            var list = new List<Mobile>();
-
-            IPooledEnumerable eable = GetMobilesInRange(AuraRange);
-
-            foreach (Mobile m in eable)
-            {
-                if (m != this && SpellHelper.ValidIndirectTarget(this, m) && CanBeHarmful(m, false) && (!Core.AOS || InLOS(m)))
-                {
-                    list.Add(m);
-                }
-            }
-
-            eable.Free();
-
-            foreach (Mobile m in list)
+            foreach (Mobile m in SpellHelper.AcquireIndirectTargets(this, this, Map, AuraRange).OfType<Mobile>())
             {
                 int damage = GetAuraDamage(m);
 
@@ -7478,8 +7437,6 @@ namespace Server.Mobiles
                 m.RevealingAction();
                 AuraEffect(m);
             }
-
-            ColUtility.Free(list);
         }
 
         public virtual void AuraEffect(Mobile m)

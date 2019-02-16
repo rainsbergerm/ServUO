@@ -134,6 +134,14 @@ namespace Server.Items
                 list.Add(new ContextMenus.EatEntry(from, this));
         }
 
+        public virtual bool TryEat(Mobile from)
+        {
+            if (Deleted || !Movable || !from.CheckAlive() || !CheckItemUse(from))
+                return false;
+
+            return Eat(from);
+        }
+
         public override void GetProperties(ObjectPropertyList list)
         {
             base.GetProperties(list);
@@ -1690,7 +1698,13 @@ namespace Server.Items
     {
         [Constructable]
         public Hamburger()
-            : base(0xA0DA)
+            : this(1)
+        {
+        }
+
+        [Constructable]
+        public Hamburger(int amount)
+            : base(amount, 0xA0DA)
         {
             FillFactor = 2;
         }
@@ -1720,7 +1734,13 @@ namespace Server.Items
     {
         [Constructable]
         public HotDog()
-            : base(0xA0D8)
+            : this(1)
+        {
+        }
+
+        [Constructable]
+        public HotDog(int amount)
+            : base(amount, 0xA0D8)
         {
             FillFactor = 2;
         }
@@ -1772,6 +1792,69 @@ namespace Server.Items
             base.Deserialize(reader);
 
             int version = reader.ReadInt();
+        }
+    }
+
+    public class PulledPorkPlatter : Food
+    {
+        public override int LabelNumber { get { return 1123351; } } // Pulled Pork Platter
+
+        [Constructable]
+        public PulledPorkPlatter()
+            : base(1, 0x999F)
+        {
+            FillFactor = 5;
+            Stackable = false;
+            Hue = 1157;
+        }
+
+        public PulledPorkPlatter(Serial serial)
+            : base(serial)
+        {
+        }
+
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+            writer.Write((int)0);
+        }
+
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+            int version = reader.ReadInt();
+
+        }
+    }
+
+    public class PulledPorkSandwich : Food
+    {
+        public override int LabelNumber { get { return 1123352; } } // Pulled Pork Sandwich
+
+        [Constructable]
+        public PulledPorkSandwich()
+            : base(1, 0x99A0)
+        {
+            FillFactor = 3;
+            Stackable = false;
+        }
+
+        public PulledPorkSandwich(Serial serial)
+            : base(serial)
+        {
+        }
+
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+            writer.Write((int)0);
+        }
+
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+            int version = reader.ReadInt();
+
         }
     }
 }

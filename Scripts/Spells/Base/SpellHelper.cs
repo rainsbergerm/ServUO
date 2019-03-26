@@ -782,6 +782,8 @@ namespace Server.Spells
             return false;
         }
 
+        public static bool RestrictRedTravel { get { return Config.Get("General.RestrictRedsToFel", false); } }
+
         private delegate bool TravelValidator(Map map, Point3D loc);
 
         private static readonly TravelValidator[] m_Validators = new TravelValidator[]
@@ -948,21 +950,14 @@ namespace Server.Spells
             return (map == Map.Ilshenar);
         }
 
-        public static bool IsSolenHiveLoc(Point3D loc)
-        {
-            int x = loc.X, y = loc.Y;
-
-            return (x >= 5640 && y >= 1776 && x < 5935 && y < 2039);
-        }
-
         public static bool IsTrammelSolenHive(Map map, Point3D loc)
         {
-            return (map == Map.Trammel && IsSolenHiveLoc(loc));
+            return map == Map.Trammel && Region.Find(loc, map).Name == "Solen Hives";
         }
 
         public static bool IsFeluccaSolenHive(Map map, Point3D loc)
         {
-            return (map == Map.Felucca && IsSolenHiveLoc(loc));
+            return map == Map.Felucca && Region.Find(loc, map).Name == "Solen Hives";
         }
 
         public static bool IsFeluccaT2A(Map map, Point3D loc)

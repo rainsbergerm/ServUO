@@ -185,7 +185,7 @@ namespace Server
                 }
 
                 if (m != null)
-                    BaseFishPie.ScaleDamage(m, ref totalDamage, phys, fire, cold, pois, nrgy, direct);
+                    BaseFishPie.ScaleDamage(from, m, ref totalDamage, phys, fire, cold, pois, nrgy, direct);
 
                 if (Core.HS && ArmorPierce.IsUnderEffects(m))
                 {
@@ -880,20 +880,6 @@ namespace Server
 
                 //Virtue Artifacts
                 value += AnkhPendant.GetManaRegenModifier(m);
-            }
-            else if (attribute == AosAttribute.BonusDex)
-            {
-                #region City Loyalty
-                if (CityLoyaltySystem.HasTradeDeal(m, TradeDeal.OrderOfEngineers))
-                    value += 3;
-                #endregion
-            }
-            else if (attribute == AosAttribute.BonusStr)
-            {
-                #region City Loyalty
-                if (CityLoyaltySystem.HasTradeDeal(m, TradeDeal.MiningCooperative))
-                    value += 3;
-                #endregion
             }
             #endregion
 
@@ -1961,7 +1947,8 @@ namespace Server
         HitSparks       = 0x00000004,
         Bane            = 0x00000008,
         MysticWeapon    = 0x00000010,
-        AssassinHoned   = 0x00000020
+        AssassinHoned   = 0x00000020,
+        Focus            = 0x00000040,
     }
 
     public sealed class ExtendedWeaponAttributes : BaseAttributes
@@ -2101,6 +2088,19 @@ namespace Server
             set
             {
                 this[ExtendedWeaponAttribute.AssassinHoned] = value;
+            }
+        }
+
+        [CommandProperty(AccessLevel.GameMaster)]
+        public int Focus
+        {
+            get
+            {
+                return this[ExtendedWeaponAttribute.Focus];
+            }
+            set
+            {
+                this[ExtendedWeaponAttribute.Focus] = value;
             }
         }
     }
@@ -2375,6 +2375,11 @@ namespace Server
 
         public void AddTo(Mobile m)
         {
+            if (Discordance.UnderPVPEffects(m))
+            {
+                return;
+            }
+
             Remove();
 
             for (int i = 0; i < 5; ++i)

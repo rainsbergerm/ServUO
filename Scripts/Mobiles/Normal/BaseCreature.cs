@@ -751,7 +751,7 @@ namespace Server.Mobiles
             }
             else if (MinTameSkill < 108) // Currently, with increased control slots, taming skill does not seem to pass 108.0
             {
-                if (MinTameSkill < 0)
+                if (MinTameSkill <= 0)
                 {
                     current = Math.Ceiling(Math.Min(108.0, Math.Max(0, CurrentTameSkill) + (Math.Abs(minSkill) * .7)));
                 }
@@ -7736,6 +7736,8 @@ namespace Server.Mobiles
                     toTeleport.PlaySound(0x1FE);
 
                     Combatant = toTeleport;
+
+                    OnAfterTeleport(toTeleport);
                 }
             }
         }
@@ -7764,6 +7766,10 @@ namespace Server.Mobiles
 
             ColUtility.Free(list);
             return mob;
+        }
+
+        public virtual void OnAfterTeleport(Mobile m)
+        {
         }
         #endregion
 
@@ -7810,7 +7816,7 @@ namespace Server.Mobiles
         {
             long tc = Core.TickCount;
 
-            if (Combatant != null && HasAura && tc >= m_NextAura)
+            if (HasAura && tc >= m_NextAura)
             {
                 AuraDamage();
                 m_NextAura = tc + (int)AuraInterval.TotalMilliseconds;
@@ -7922,6 +7928,9 @@ namespace Server.Mobiles
 
         public virtual bool Rummage()
         {
+            if (Map == null)
+                return false;
+
             Corpse toRummage = null;
 
             IPooledEnumerable eable = Map.GetItemsInRange(Location, 2);

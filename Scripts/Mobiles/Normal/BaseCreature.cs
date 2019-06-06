@@ -1319,28 +1319,30 @@ namespace Server.Mobiles
         {
             foreach (Mobile m in SpellHelper.AcquireIndirectTargets(this, this, Map, 2).OfType<Mobile>())
             {
-                DoHarmful(m);
-
-                m.FixedParticles(0x374A, 10, 15, 5013, 0x496, 0, EffectLayer.Waist);
-                m.PlaySound(0x231);
-
-                m.SendMessage("You feel the life drain out of you!");
-
-                int toDrain = GetDrainAmount(m);
-
-                //Monster Stealables
-                if (m is PlayerMobile)
-                {
-                    PlayerMobile pm = m as PlayerMobile;
-                    toDrain = (int)LifeShieldLotion.HandleLifeDrain(pm, toDrain);
-                }
-                //end
-
-
-                Hits += toDrain;
-                m.Damage(toDrain, this);
+                DoLifeDrain(m);
             }
         }
+
+        public virtual void DoLifeDrain(Mobile m)
+        {
+            DoHarmful(m);
+
+            m.FixedParticles(0x374A, 10, 15, 5013, 0x496, 0, EffectLayer.Waist);
+            m.PlaySound(0x231);
+
+            m.SendMessage("You feel the life drain out of you!");
+
+            int toDrain = GetDrainAmount(m);
+
+            if (m is PlayerMobile)
+            {
+                toDrain = (int)LifeShieldLotion.HandleLifeDrain((PlayerMobile)m, toDrain);
+            }
+
+            Hits += toDrain;
+            AOS.Damage(m, this, toDrain, 0, 0, 0, 0, 0, 0, 100);
+        }
+
         #endregion
 
         #region Colossal Blow
@@ -1829,14 +1831,13 @@ namespace Server.Mobiles
 
             double dMinTameSkill = m_CurrentTameSkill;
 
-            if (dMinTameSkill > -24.9 && AnimalTaming.CheckMastery(m, this))
+            if (dMinTameSkill > -24.9 && DarkWolfFamiliar.CheckMastery(m, this))
             {
                 dMinTameSkill = -24.9;
             }
 
-            int taming =
-                (int)((useBaseSkill ? m.Skills[SkillName.AnimalTaming].Base : m.Skills[SkillName.AnimalTaming].Value) * 10);
-            int lore = (int)((useBaseSkill ? m.Skills[SkillName.AnimalLore].Base : m.Skills[SkillName.AnimalLore].Value) * 10);
+            int taming = (int)((useBaseSkill ? m.Skills[SkillName.AnimalTaming].Base : m.Skills[SkillName.AnimalTaming].Value) * 10);
+            int lore =   (int)((useBaseSkill ? m.Skills[SkillName.AnimalLore].Base : m.Skills[SkillName.AnimalLore].Value) * 10);
             int bonus = 0, chance = 700;
 
             if (Core.ML)

@@ -761,12 +761,6 @@ namespace Server
         private DateTime m_LastMovedTime;
         private Direction m_Direction;
         private LightType m_Light;
-        //private bool m_HonestyItem;
-        //private string m_HonestyRegion;
-        //private Mobile m_HonestyOwner;
-        //private Timer m_HonestyTimer;
-        //private DateTime m_HonestyPickup;
-        //private Boolean m_HonestyTimerTicking;
         #endregion
 
         private ItemDelta m_DeltaFlags;
@@ -1384,6 +1378,11 @@ namespace Server
                 AddLockedDownProperty(list);
             }
 
+            if (DisplayWeight)
+            {
+                AddWeightProperty(list);
+            }
+
             Mobile blessedFor = BlessedFor;
 
             if (blessedFor != null && !blessedFor.Deleted)
@@ -1394,11 +1393,6 @@ namespace Server
             if (DisplayLootType)
             {
                 AddLootTypeProperty(list);
-            }
-
-            if (DisplayWeight)
-            {
-                AddWeightProperty(list);
             }
 
             if (QuestItem)
@@ -1438,20 +1432,6 @@ namespace Server
         {
             list.Add(1062203, "{0}", m.Name); // Blessed for ~1_NAME~
         }
-
-        /*public virtual void AddHonestyProperty(ObjectPropertyList list)
-        {
-            if (HonestyItem)
-            {
-                if (m_HonestyPickup != DateTime.MinValue)
-                {
-                    int minutes = (int)(m_HonestyPickup + TimeSpan.FromHours(3) - DateTime.UtcNow).TotalMinutes;
-                    list.Add(1151914, minutes.ToString()); // Minutes remaining for credit: ~1_val~
-                }
-
-                list.Add(1151520); // lost item (Return to gain Honesty)
-            }
-        }*/
 
         public virtual void AddItemSocketProperties(ObjectPropertyList list)
         {

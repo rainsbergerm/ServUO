@@ -254,10 +254,10 @@ namespace Server.Mobiles
         public bool UseSummoningRite { get; set; }
 
         #region Guantlet Points
-        private double m_GauntletPoints;
+        /*private double m_GauntletPoints;
 
 		[CommandProperty(AccessLevel.Administrator)]
-		public double GauntletPoints { get { return m_GauntletPoints; } set { m_GauntletPoints = value; } }
+		public double GauntletPoints { get { return m_GauntletPoints; } set { m_GauntletPoints = value; } }*/
 		#endregion
 
         #region Points System
@@ -430,22 +430,7 @@ namespace Server.Mobiles
 		[CommandProperty(AccessLevel.GameMaster)]
 		public TimeSpan NpcGuildGameTime { get { return m_NpcGuildGameTime; } set { m_NpcGuildGameTime = value; } }
 
-		private int m_ToTItemsTurnedIn;
-
-		[CommandProperty(AccessLevel.GameMaster)]
-		public int ToTItemsTurnedIn { get { return m_ToTItemsTurnedIn; } set { m_ToTItemsTurnedIn = value; } }
-
-		private int m_ToTTotalMonsterFame;
-
-		[CommandProperty(AccessLevel.GameMaster)]
-		public int ToTTotalMonsterFame { get { return m_ToTTotalMonsterFame; } set { m_ToTTotalMonsterFame = value; } }
-
 		public int ExecutesLightningStrike { get { return m_ExecutesLightningStrike; } set { m_ExecutesLightningStrike = value; } }
-
-		private int m_VASTotalMonsterFame;
-
-		[CommandProperty(AccessLevel.GameMaster)]
-		public int VASTotalMonsterFame { get { return m_VASTotalMonsterFame; } set { m_VASTotalMonsterFame = value; } }
 
 		[CommandProperty(AccessLevel.GameMaster)]
 		public int ToothAche { get { return BaseSweet.GetToothAche(this); } set { BaseSweet.SetToothAche(this, value, true); } }
@@ -1304,6 +1289,8 @@ namespace Server.Mobiles
                 }, 
                 (EtherealMount)from.Mount);
             }
+
+            from.CheckStatTimers();
         }
 
 		private bool m_NoDeltaRecursion;
@@ -4197,8 +4184,8 @@ namespace Server.Mobiles
 			m_AutoStabled = new List<Mobile>();
 
 			#region Mondain's Legacy
-			m_Quests = new List<BaseQuest>();
-			m_Chains = new Dictionary<QuestChain, BaseChain>();
+			//m_Quests = new List<BaseQuest>();
+			//m_Chains = new Dictionary<QuestChain, BaseChain>();
 			m_DoneQuests = new List<QuestRestartInfo>();
 			m_Collections = new Dictionary<Collection, int>();
 			m_RewardTitles = new List<object>();
@@ -4512,6 +4499,8 @@ namespace Server.Mobiles
 
 			switch (version)
 			{
+                case 40: // Version 40, moved gauntlet points, virtua artys and TOT turn ins to PointsSystem
+                case 39: // Version 39, removed ML quest save/load
                 case 38:
                     NextGemOfSalvationUse = reader.ReadDateTime();
                     goto case 37;
@@ -4547,7 +4536,10 @@ namespace Server.Mobiles
                 case 30: goto case 29;
 				case 29:
 					{
-						m_GauntletPoints = reader.ReadDouble();
+                        if (version < 40)
+                        {
+                            PointsSystem.DoomGauntlet.SetPoints(this, reader.ReadDouble());
+                        }
 
 						m_SSNextSeed = reader.ReadDateTime();
 						m_SSSeedExpire = reader.ReadDateTime();
@@ -4567,12 +4559,24 @@ namespace Server.Mobiles
                             reader.ReadString(); // Old m_ExpTitle
                         }
 
-                        m_VASTotalMonsterFame = reader.ReadInt();
+                        if (version < 40)
+                        {
+                            PointsSystem.VirtueArtifacts.SetPoints(this, reader.ReadInt());
+                        }
 
-						m_Quests = QuestReader.Quests(reader, this);
-						m_Chains = QuestReader.Chains(reader);
+                        if (version < 39)
+                        {
+                            List<BaseQuest> quests = QuestReader.Quests(reader, this);
+                            Dictionary<QuestChain, BaseChain> dic = QuestReader.Chains(reader);
 
-						m_Collections = new Dictionary<Collection, int>();
+                            if (quests != null && quests.Count > 0)
+                                MondainQuestData.QuestData[this] = quests;
+
+                            if (dic != null && dic.Count > 0)
+                                MondainQuestData.ChainData[this] = dic;
+                        }
+
+                        m_Collections = new Dictionary<Collection, int>();
 						m_RewardTitles = new List<object>();
 
 						for (int i = reader.ReadInt(); i > 0; i--)
@@ -4643,8 +4647,10 @@ namespace Server.Mobiles
 					}
 				case 21:
 					{
-						m_ToTItemsTurnedIn = reader.ReadEncodedInt();
-						m_ToTTotalMonsterFame = reader.ReadInt();
+                        if (version < 40)
+                        {
+                            PointsSystem.TreasuresOfTokuno.Convert(this, reader.ReadEncodedInt(), reader.ReadInt());
+                        }
 						goto case 20;
 					}
 				case 20:
@@ -4842,7 +4848,7 @@ namespace Server.Mobiles
 			}
 
 			#region Mondain's Legacy
-			if (m_Quests == null)
+			/*if (m_Quests == null)
 			{
 				m_Quests = new List<BaseQuest>();
 			}
@@ -4850,7 +4856,7 @@ namespace Server.Mobiles
 			if (m_Chains == null)
 			{
 				m_Chains = new Dictionary<QuestChain, BaseChain>();
-			}
+			}*/
 
 			if (m_DoneQuests == null)
 			{
@@ -4959,7 +4965,7 @@ namespace Server.Mobiles
 
 			base.Serialize(writer);
 
-			writer.Write(38); // version
+			writer.Write(40); // version
 
             writer.Write((DateTime)NextGemOfSalvationUse);
 
@@ -4987,9 +4993,6 @@ namespace Server.Mobiles
 
             // Version 30 open to take out old Queens Loyalty Info
 
-			// Version 29
-			writer.Write(m_GauntletPoints);
-
 			#region Plant System
 			writer.Write(m_SSNextSeed);
 			writer.Write(m_SSSeedExpire);
@@ -4997,13 +5000,9 @@ namespace Server.Mobiles
 			writer.Write(m_SSSeedMap);
 			#endregion
 
-            writer.Write(m_VASTotalMonsterFame);
+            #region Mondain's Legacy
 
-			#region Mondain's Legacy
-			QuestWriter.Quests(writer, m_Quests);
-			QuestWriter.Chains(writer, m_Chains);
-
-			if (m_Collections == null)
+            if (m_Collections == null)
 			{
 				writer.Write(0);
 			}
@@ -5060,8 +5059,6 @@ namespace Server.Mobiles
 			ChampionTitleInfo.Serialize(writer, m_ChampionTitles);
 
 			writer.Write(m_LastValorLoss);
-			writer.WriteEncodedInt(m_ToTItemsTurnedIn);
-			writer.Write(m_ToTTotalMonsterFame); //This ain't going to be a small #.
 
 			writer.WriteEncodedInt(m_AllianceMessageHue);
 			writer.WriteEncodedInt(m_GuildMessageHue);
@@ -5523,15 +5520,29 @@ namespace Server.Mobiles
 
 		[CommandProperty(AccessLevel.GameMaster)]
 		public SolenFriendship SolenFriendship { get { return m_SolenFriendship; } set { m_SolenFriendship = value; } }
-		#endregion
+        #endregion
 
-		#region Mondain's Legacy
-		private List<BaseQuest> m_Quests;
+        #region Mondain's Legacy
+        /*private List<BaseQuest> m_Quests;
 		private Dictionary<QuestChain, BaseChain> m_Chains;
 
 		public List<BaseQuest> Quests { get { return m_Quests; } }
+        public Dictionary<QuestChain, BaseChain> Chains { get { return m_Chains; } }*/
+        public List<BaseQuest> Quests
+        {
+            get
+            {
+                return MondainQuestData.GetQuests(this);
+            }
+        }
 
-		public Dictionary<QuestChain, BaseChain> Chains { get { return m_Chains; } }
+        public Dictionary<QuestChain, BaseChain> Chains
+        {
+            get
+            {
+                return MondainQuestData.GetChains(this);
+            }
+        }
 
 		[CommandProperty(AccessLevel.GameMaster)]
 		public bool Peaced
@@ -5780,7 +5791,7 @@ namespace Server.Mobiles
                     }
                 }
             }
-            else if (DisplayGuildAbbr)
+            else if (guild != null && DisplayGuildAbbr)
             {
                 if (vvv)
                 {
@@ -5801,6 +5812,10 @@ namespace Server.Mobiles
                 {
                     suffix = String.Format("[{0}]", Utility.FixHtml(guild.Abbreviation));
                 }
+            }
+            else if (vvv)
+            {
+                suffix = "[VvV]";
             }
 
             suffix = ApplyNameSuffix(suffix);

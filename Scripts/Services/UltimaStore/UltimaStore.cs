@@ -220,8 +220,9 @@ namespace Server.Engines.UOStore
             Register<TapestryOfSosaria>(1062917, 1156961, 0x234E, 0, 0, 100, cat);
             Register<RoseOfTrinsic>(1062913, 1156960, 0x234D, 0, 0, 100, cat);
             Register<HearthOfHomeFireDeed>(1062919, 1156958, 0, 0x9C97, 0, 100, cat);
-            // TODO: Singing Ball
-            // TODO: Secret Chest
+
+            Register<StoreSingingBall>(1041245, 1156907, 0, 0x9CB8, 0, 200, cat);
+            Register<SecretChest>(1151583, 1156909, 0x9706, 0, 0, 500, cat);
 
             Register<MiniHouseDeed>(new TextDefinition[] { 1062096, 1157015 }, 1156916, 0, 0x9CB5, 0, 200, cat, ConstructMiniHouseDeed); // two story wood & plaster
             Register<MiniHouseDeed>(new TextDefinition[] { 1062096, 1011317 }, 1156916, 0x22F5, 0, 0, 200, cat, ConstructMiniHouseDeed); // small stone tower
@@ -305,6 +306,7 @@ namespace Server.Engines.UOStore
             //TODO: UndeadWeddingBundle, TotemOfChromaticFortune, 
 
             Register<PetBrandingIron>(1157314, 1157372, 0, 0x9CC3, 0, 600, cat);
+            Register<ImprovedRockHammer>(1157177, 1157306, 0, 0x9CBB, 0, 1000, cat);
             Register<PetBondingPotion>(1152921, 1156678, 0, 0x9CBC, 0, 500, cat); 
 
             Register<ForgedMetalOfArtifacts>(new TextDefinition[] { 1149868, 1156686 }, 1156674, 0, 0x9C65, 0, 1000, cat, ConstructForgedMetal);
@@ -561,9 +563,7 @@ namespace Server.Engines.UOStore
 
         public static void AddPendingItem(Mobile m, Item item)
         {
-            List<Item> list;
-
-            if (!PendingItems.TryGetValue(m, out list))
+            if (!PendingItems.TryGetValue(m, out List<Item> list))
             {
                 PendingItems[m] = list = new List<Item>();
             }
@@ -583,9 +583,7 @@ namespace Server.Engines.UOStore
 
         public static void CheckPendingItem(Mobile m)
         {
-            List<Item> list;
-
-            if (PendingItems.TryGetValue(m, out list))
+            if (PendingItems.TryGetValue(m, out List<Item> list))
             {
                 var index = list.Count;
 

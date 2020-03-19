@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+
 using Server;
 using Server.Items;
 using Server.Network;
 using Server.Mobiles;
 using Server.Regions;
-using System.Linq;
-using System.IO;
+using Server.ContextMenus;
 
 namespace Server.Multis
 {
@@ -2618,6 +2620,7 @@ namespace Server.Multis
             }
 
             SetFacingComponents(m_Facing, old, false);
+
             Map.OnEnter(this);
 
             ColUtility.Free(toMove);
@@ -2781,11 +2784,21 @@ namespace Server.Multis
 
         public static void ForceRemovePilot(Mobile m)
         {
+            
+
             if (m.FindItemOnLayer(Layer.Mount) is BoatMountItem mountItem)
             {
                 if (mountItem.Mount is BaseBoat boat)
                 {
-                    boat.RemovePilot(m);
+                    if (boat.Pilot == m)
+                    {
+                        boat.RemovePilot(m);
+                    }
+                    else
+                    {
+                        m.RemoveItem(mountItem);
+                        mountItem.Delete();
+                    }
                 }
                 else
                 {
@@ -3035,12 +3048,12 @@ namespace Server.Multis
             }
         }
 
-        public void ReleaseContainerPacket()
+        private void ReleaseContainerPacket()
         {
             Packet.Release(ref m_ContainerPacket);
         }
 
-        public Packet GetPacketContainer(IEnumerable<IEntity> entities)
+        protected Packet GetPacketContainer(IEnumerable<IEntity> entities)
         {
             if (ContainerPacket == null)
             {
@@ -3140,7 +3153,6 @@ namespace Server.Multis
                         cmd = 0x02;
                         itemID = multi.ItemID;
                         itemID &= 0x7FFF;
-                        //itemID |= 0x10000;
                         hue = (short)multi.Hue;
                         amount = (short)multi.Amount;
                     }
@@ -3407,6 +3419,48 @@ namespace Server.Multis
             {
                 writer.Write(p);
             }
+        }
+    }
+
+    public class DryDockEntry : ContextMenuEntry
+    {
+        private BaseBoat Boat { get; set; }
+        private Mobile From { get; set; }
+
+        public DryDockEntry(BaseBoat boat, Mobile from)
+            : base(1116520, 12)
+        {
+            From = from;
+            Boat = boat;
+
+            Enabled = Boat != null && Boat.IsOwner(from);
+        }
+
+        public override void OnClick()
+        {
+            if (Boat != null && !Boat.Contains(From) && Boat.IsOwner(From))
+                Boat.BeginDryDock(From);
+        }
+    }
+
+    public class RenameShipEntry : ContextMenuEntry
+    {
+        private BaseBoat Boat { get; set; }
+        private Mobile From { get; set; }
+
+        public RenameShipEntry(BaseBoat boat, Mobile from)
+            : base(1111680, 3)
+        {
+            Boat = boat;
+            From = from;
+
+            Enabled = boat != null && boat.IsOwner(from);
+        }
+
+        public override void OnClick()
+        {
+            if (Boat != null && Boat.IsOwner(From))
+                Boat.BeginRename(From);
         }
     }
 }
